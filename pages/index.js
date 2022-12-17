@@ -1,11 +1,63 @@
-import Head from 'next/head'
-import Image from 'next/image'
-import { Inter } from '@next/font/google'
-import styles from '../styles/Home.module.css'
+import Head from "next/head";
+import Image from "next/image";
+import { useState, useEffect } from "react";
+import styles from "../styles/Home.module.css";
+import Modal from "../components/modal";
+import { AiOutlineSearch } from "react-icons/ai";
 
-const inter = Inter({ subsets: ['latin'] })
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY;
 
 export default function Home() {
+  const [movies, setMovies] = useState([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [data, setData] = useState({});
+  const [page, setPage] = useState(1);
+
+  const nextPage = () => {
+    setMovies([]);
+    fetchMovies(page + 1);
+    window.scrollTo(0, 0);
+    setPage(page + 1);
+  };
+
+  const prevPage = () => {
+    setMovies([]);
+    fetchMovies(page - 1);
+    window.scrollTo(0, 0);
+    setPage(page - 1);
+  };
+
+  const displayModal = (movie) => {
+    setData(movie);
+    console.log(movie);
+    setIsOpen(true);
+  };
+
+  const fetchMovies = async (pageNum) => {
+    setMovies([]);
+    const res = await fetch(
+      `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&page=${pageNum}`
+    );
+    const data = await res.json();
+    setMovies(data.results);
+  };
+
+  const searchMovies = async (query) => {
+    if (!query) return fetchMovies(1);
+    setMovies([]);
+    const res = await fetch(
+      `https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${query}`
+    );
+    const data = await res.json();
+    setMovies(data.results);
+  };
+
+  useEffect(() => {
+    fetchMovies(1);
+  }, []);
+
+  console.log(movies);
+
   return (
     <>
       <Head>
@@ -14,110 +66,65 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <main className={styles.main}>
-        <div className={styles.description}>
-          <p>
-            Get started by editing&nbsp;
-            <code className={styles.code}>pages/index.js</code>
-          </p>
-          <div>
-            <a
-              href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              By{' '}
-              <Image
-                src="/vercel.svg"
-                alt="Vercel Logo"
-                className={styles.vercelLogo}
-                width={100}
-                height={24}
-                priority
-              />
-            </a>
-          </div>
-        </div>
-
-        <div className={styles.center}>
-          <Image
-            className={styles.logo}
-            src="/next.svg"
-            alt="Next.js Logo"
-            width={180}
-            height={37}
-            priority
-          />
-          <div className={styles.thirteen}>
-            <Image
-              src="/thirteen.svg"
-              alt="13"
-              width={40}
-              height={31}
-              priority
+      <div className={styles.container}>
+        <div className={styles.header}>
+          <Image src="/insynk.png" alt="Logo" width={100} height={50} />
+          {/* make a search box with search icon*/}
+          <div className={styles.search}>
+            <AiOutlineSearch />
+            <input
+              type="text"
+              placeholder="Search for a movie"
+              className={styles.searchInput}
+              onChange={(e) => searchMovies(e.target.value)}
             />
           </div>
         </div>
 
+        <div className={styles.title}>Most Recent Movies</div>
+        {movies && movies.length === 0 && (
+          <div className={styles.noMovies}>No movies found</div>
+        )}
         <div className={styles.grid}>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <h2 className={inter.className}>
-              Docs <span>-&gt;</span>
-            </h2>
-            <p className={inter.className}>
-              Find in-depth information about Next.js features and&nbsp;API.
-            </p>
-          </a>
-
-          <a
-            href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <h2 className={inter.className}>
-              Learn <span>-&gt;</span>
-            </h2>
-            <p className={inter.className}>
-              Learn about Next.js in an interactive course with&nbsp;quizzes!
-            </p>
-          </a>
-
-          <a
-            href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <h2 className={inter.className}>
-              Templates <span>-&gt;</span>
-            </h2>
-            <p className={inter.className}>
-              Discover and deploy boilerplate example Next.js&nbsp;projects.
-            </p>
-          </a>
-
-          <a
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <h2 className={inter.className}>
-              Deploy <span>-&gt;</span>
-            </h2>
-            <p className={inter.className}>
-              Instantly deploy your Next.js site to a shareable URL
-              with&nbsp;Vercel.
-            </p>
-          </a>
+          {movies.map((movie) => (
+            <div
+              className={styles.card}
+              key={movie.title}
+              onClick={() => displayModal(movie)}
+            >
+              <div className={styles.rating}>{movie.vote_average}</div>
+              <img
+                src={
+                  movie.poster_path
+                    ? `https://image.tmdb.org/t/p/w440_and_h660_face${movie.poster_path}`
+                    : "https://via.placeholder.com/440x660"
+                }
+                alt={movie.title}
+                className={styles.image}
+              />
+              <div className={styles.cardTitle}>{movie.title}</div>
+            </div>
+          ))}
         </div>
-      </main>
+        <div className={styles.pagination}>
+          {page === 1 ? (
+            <div></div>
+          ) : (
+            <button
+              onClick={prevPage}
+              disabled={page === 1}
+              className={styles.pageButton}
+            >
+              Prev
+            </button>
+          )}
+          <span>Page {page}</span>
+          <button onClick={nextPage} className={styles.pageButton}>
+            Next
+          </button>
+        </div>
+      </div>
+      {isOpen && <Modal setIsOpen={setIsOpen} movie={data} />}
     </>
-  )
+  );
 }
